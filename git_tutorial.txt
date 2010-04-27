@@ -279,4 +279,8 @@ http://github.com/userB/project_B に反映させて欲しい」と要求する�
 Pull Requestが実行されると、userAにはgithubからメールが届く。userA氏は、
 「Fork Queue」をクリックし、applyで変更を承認すれば、反映される。
 
+4. 参考文献
+
+入門git、 Travis Swicegood著、でびあんぐる監訳、オーム社
 (以上)
+
