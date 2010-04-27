@@ -1,0 +1,282 @@
+*** gitの初歩  ver0.1 ***
+
+gitは分散型バージョン管理システム(DVCS: Distributed Version Control System)
+であり、CVSなどの集中型のバージョン管理システムにはない特徴がある。
+以下の文章は3つの部分にわかれている。
+はじめの箇所ではgitのセットアップについて説明する。
+次に、gitの簡単な使い方について説明する。
+そして最後に、gitを利用したプロジェクトホスティングサービスである
+githubの使い方を説明する。
+
+1. gitセットアップ
+
+1.1 gitのインストール
+
+Mac OS Xの場合、MacPorts でインストールできる。
+
+$ sudo port install git-core +doc
+
+インストールが正常に行われたかどうかは以下のコマンドで確認できる。
+
+$ git --version
+git version 1.7.0.4
+
+1.2 初期設定
+名前とメールアドレスを設定する。
+
+$ git config --global user.name "Taro Yamada"
+$ git config --global user.email "taro@yamada.com"
+$ git config --global color.ui "auto"
+
+上記三行目の設定は出力に色をつけてくれる。
+設定は$HOME/.gitconfigに書かれる。
+git config --global --listコマンドで設定内容の確認ができる。
+
+$ git config --global --list
+user.name=Taro Yamada
+user.email=taro@yamada.com
+color.ui=auto
+
+ヘルプを見たいときはgit help <command>とする。例えば、コマンド"add"の
+詳細が知りたいときは
+
+$ git help add
+
+とする。このヘルプドキュメントはインスール時に"+doc"をつけないと
+インストールされないので注意。
+
+2. gitの簡単な使い方
+
+2.1 データ構造について
+
+gitは３段階のデータ構造を持つ。「リポジトリ(repository)」、
+「index(別名staging area)」、「作業ツリー(working tree)」である
+
+(1)リポジトリとはデータの貯蔵庫のことである。集中管理型の
+   バージョン管理システムでは中央サーバのみがリポジトリを持つが、
+   DVCSでは各マシンがレポジトリを持つ。
+(2)作業ツリーはある指定したディレクトリ以下にあるファイルやディレクトリ
+   そのもののことである。
+(3)indexはリポジトリと作業ツリーの中間に位置する状態であり、
+   両者のバッファの役目を果たす。作業ツリーの変更内容をレポジトリに
+   反映させるためには一度、indexを経なければならない。
+
+作業順序の一例を下に示す。
+(0)レポジトリーの作成
+↓
+(1)エディタでファイルを編集する(作業ツリーの変更)
+↓
+(2)作業ツリーの変更をindexに反映させる
+↓
+(3)indexの変更をレポジトリに反映させる
+↓
+(4) レポジトリの変更をリモートレポジトリに反映
+↓
+(1)に戻る
+
+2.2 リポジトリの作成
+
+リポジトリ作成のコマンドはgit initである。
+
+$mkdir test_project
+$cd test_project
+$git init
+
+git initすると、そのディレクトリに.git/というディレクトリができて、
+そこにgitに関係したファイルなどが格納される。
+
+$ls -a
+./    ../   .git/
+
+2.3 作業ツリーのindexへの反映(add)とindexのレポジトリへの反映(commit)
+
+例えば、最初のファイルとしてtest.txtを作ったとする。
+
+$ echo "this is test file" > test.txt
+$ less test.txt
+this is test file
+
+この作業ツリーの変更をgit addコマンドでindexに反映させる。
+$ git add test.txt
+
+ここで、現在の状態を確認してみる。そのためにはgit statusコマンドを使えばよい。
+$ git status
+# On branch master
+#
+# Initial commit
+#
+# Changes to be committed:
+#   (use "git rm --cached <file>..." to unstage)
+#
+#	new file:   test.txt
+#
+
+"Changes to be commited"(コミットされるべき変更あり)と表示され、
+test.txtという新しいファイルが作成されたことが示される。
+
+git commitコマンドでindexへの変更をリポジトリに反映させる。
+このときに、-mオプションで変更内容のコメントを書く。
+(-mを省略するとエディタが立ち上がる)
+$ git add test.txt
+$ git commit -m "this is first commit"
+
+ここで再び、git statusコマンドで現在の状態を確認してみる。
+$ git status                                                               
+# On branch master
+nothing to commit (working directory clean)
+
+上で、git commitが成功していれば、"nothing to commit"(コミットの必要なし)
+と表示される。ここまでの作業で、test.txtの作成がレポジトリに反映された。
+
+2.3ファイルの更新とレポジトリへの反映
+
+次に、test.txtを書き換えてみる。
+$ echo "one more line" >> test.txt
+
+ここで、git statusコマンドを打ってみる。
+$ git status
+# On branch master
+# Changed but not updated:
+#   (use "git add <file>..." to update what will be committed)
+#   (use "git checkout -- <file>..." to discard changes in working directory)
+#
+#	modified:   test.txt
+#
+no changes added to commit (use "git add" and/or "git commit -a")
+
+"modified:   test.txt"と表示され、test.txtファイルが改変されたことがわかる。
+次にgit diffコマンドで作業ツリーとindexの差分をチェックしてみる。
+$ git diff
+diff --git a/test.txt b/test.txt
+index 9d8a4e7..ece73fa 100644
+--- a/test.txt
++++ b/test.txt
+@@ -1 +1,2 @@
+ this is test file
++one more line
+
+このように表示される。先頭に+のついた行が追加を示す。
+つまり、一行目の"this is test file"には変更はなく、二行目の"one more line"が
+追加されたことがわかる。
+また、ここにはないが削除した行は先頭に-がついて示される。
+次に、この変更をgit addでindexに反映させた後に、git commitでレポジトリに
+反映させる。
+
+$ git add test.txt
+$ git commit -m "2nd line is added"
+
+このあとで、git statusコマンドを打って現在の状態を見ると、
+$ git status
+# On branch master
+nothing to commit (working directory clean)
+
+と表示されて、レポジトリに反映されていることが確認できる。
+git diffでindexと作業ツリーの差分を見ると
+$ git diff
+$           #何も表示されない
+となり、indexと作業ツリーが同一であることがわかる。
+改変履歴を見たいときはgit logコマンドを使う。
+$ git log
+commit 853f9fe8684f152137fe0f3f1686e74937544584
+Author: XXXXXX XXXXXX <xxxxxx@xxxx.xxxx.xxxxxxx.ac.jp>
+Date:   XXX XXX 00 00:00:00 0000 +0900
+
+    2nd line is added
+
+commit 6c83578aae558f947202572ac9e4c58b411f1136
+Author: XXXXXX XXXXXX <xxxxxx@xxxx.xxxx.xxxxxxx.ac.jp>
+Date:   XXX XXX 00 00:00:00 0000 +0900
+
+    this is first commit
+
+ファイルのハッシュ値、作者、日付、コメントが時系列順に表示される。
+ここまでの作業で、作業ツリーの変更がレポジトリに反映された。
+
+2.4変更内容の巻き戻し方
+
+作業をしていると、過去の状態に戻したいことがある。ここではindexの状態に
+戻る方法と、レポジトリの状態まで戻る方法を示す。例えば、test.txtに
+三行目を追加したとする。
+$ echo "3rd line are added" >> text.txt
+$ less text.txt
+this is test file
+one more line
+3rd line are added
+しかし、この変更は間違えであることがわかった。気がついたのがgit addする前
+だったのでindexの状態に戻せれば良い。そのためにはgit checkoutコマンドを使う。
+$ git checkout text.txt
+$ less test.txt
+this is test file
+one more line
+このように、作業ツリーがindexの状態に戻った。
+再びtest.txtを変更して、それをgit addする。
+$echo "3rd lines are added" >> test.txt
+$ git add text.txt
+しかし、やはり間違であることがわかった。今度はindexに反映させてしまったので
+レポジトリの状態まで戻りたい。そのときはgit resetコマンドを使う。
+$ git reset 　　　　　　　#まず、indexをレポジトリの状態に戻す
+$ git checkout test.txt   #そして、作業ツリーをindexの状態に戻す
+$less test.txt
+this is test file
+one more line
+このように、作業を巻き戻すことができる。
+
+ここまでで出てきたgitのデータ構造と変更の更新、巻き戻しコマンドの関係は添付図
+(git_data_structure.png)のようになっている。
+
+2.5リモートレポジトリからのレポジトリの習得
+
+2.2ではgit initを使ってゼロから作る方法を書いた。次に途中までできたものを
+リモートサーバから取ってきたいときを考える。
+その場合、git cloneコマンドを使う。たとえば、github.comにあるhello-world.git
+というレポジトリを取ってきたいときは、
+$ git clone git://github.com/git/hello-world.git
+とすれば、カレントディレクトリ以下にhello-worldというディレクトリができる。
+
+3. Githubについて
+3.1 公開鍵(public key)の作成
+以下のサイトを参考にして公開鍵(public_key)を作成する
+http://help.github.com/mac-key-setup/
+
+3.2 アカウントを作成する
+
+http://github.com/ の
+「Pricing and Signup」をクリック
+「Open Source Sign Up!」をクリック
+「Username, Email Address, Password, Confirm Password, そして(1)で作成した
+SSH Public Key」を入力 (仮にユーザ名をuserAとする)
+
+3.3 Githubにレポジトリを作る
+
+http://github.comの右上にあるLoginボタンからログインする。すると
+https://github.comに移動する。画面右側のNew Repositoryというところを
+クリックする。Project Name, Description, Homepage URLを入力し、
+Create Repositoryをクリックする。
+(このとき、無料版の場合はprivate repositoryは作れない)
+そうすると新しいレポジトリができる。(仮にレポジトリ名をtest_projectとする)
+
+3.4 ローカルレポジトリの内容を、Github上のレポジトリに反映させる。
+
+ローカルマシン上で、githubにあげたいレポジトリに移動し、pushコマンドを
+打つと、ローカルレポジトリの内容がリモートサーバに反映される。
+$ cd test_project
+$ git push git@github.com:userA/test_project.git master  
+
+3.4 他者のレポジトリに変更を加える
+
+他の人が開発しているレポジトリに変更を加えたい場合は、forkという機能を使う。
+例えば、userA氏がuserB氏のレポジトリproject_Bに変更を加えたいと考えたとする。
+このときまず、http://github.com/userB/project_Bにアクセスし、右上の方にある
+Your Forkというボタンをクリックする。
+すると、http://github.com/userA/projcet_Bというレポジトリができる。つまり、
+自分のアカウントの下にproject_Bのfork(分岐)ができた。
+(このときに、privateなレポジトリをforkした場合、それもまたprivateになるか
+どうかが不明)userA氏はこれをローカルマシンにcloneし、改変を加えた後に、
+pushする。その後に、http://github.com/userA/projcet_B　の右上にある
+Pull Requestボタンをクリックする。Pull Requestとは、userBがuserAに対して
+「project_Bに加えた反映をもともとのレポジトリである、
+http://github.com/userB/project_B に反映させて欲しい」と要求することである。
+Pull Requestが実行されると、userAにはgithubからメールが届く。userA氏は、
+「Fork Queue」をクリックし、applyで変更を承認すれば、反映される。
+
+(以上)
